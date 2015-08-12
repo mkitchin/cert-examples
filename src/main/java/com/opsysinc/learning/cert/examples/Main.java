@@ -1,10 +1,7 @@
 package com.opsysinc.learning.cert.examples;
 
 import com.opsysinc.learning.cert.examples.util.ReaderWriterBase;
-import com.opsysinc.learning.cert.examples.vna00j.VNA00JBase;
-import com.opsysinc.learning.cert.examples.vna00j.VNA00JCompliant1;
-import com.opsysinc.learning.cert.examples.vna00j.VNA00JCompliant2;
-import com.opsysinc.learning.cert.examples.vna00j.VNA00JNonCompliant;
+import com.opsysinc.learning.cert.examples.vna00j.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -211,6 +208,69 @@ public final class Main {
         }
 
         System.out.println("\nVNA00J: Compliant #2 (AtomicInteger).");
+        System.out.println("\nExecuting " + parallelTests + " tests...");
+
+        final ExecutorService executorService = Executors.newFixedThreadPool(parallelTests, new ThreadFactory() {
+
+            @Override
+            public Thread newThread(final Runnable runnable) {
+
+                final Thread result = new Thread(runnable);
+                result.setDaemon(true);
+
+                return result;
+            }
+        });
+
+        executorService.invokeAll(tasks);
+        executorService.shutdown();
+
+        System.out.println("Checking " + parallelTests + " logs...");
+
+        int ctr = 0;
+        int outOfOrderCtr = 0;
+
+        for (final ReaderWriterBase item : tests) {
+
+            ctr++;
+
+            if (item.checkOrder()) {
+
+                System.out.println("\nTest #" + ctr + ": OUT OF ORDER");
+                item.dumpLogs();
+
+                outOfOrderCtr++;
+            }
+        }
+
+        System.out.println(String.format("\n%d of %d logs out of order.",
+                outOfOrderCtr, parallelTests));
+        System.out.println("\n...Done.");
+    }
+
+    /**
+     * Test compliant #3.
+     *
+     * @param parallelTests  Parallel test count.
+     * @param testLengthInMs Test length in MS.
+     * @throws InterruptedException
+     */
+    private static void testVNA00JCompliant3(final int parallelTests,
+                                             final long testLengthInMs)
+            throws InterruptedException {
+
+        final List<VNA00JBase> tests = new ArrayList<>();
+        final List<Callable<Object>> tasks = new ArrayList<>();
+
+        for (int ctr = 0; ctr < parallelTests; ctr++) {
+
+            final VNA00JBase test = new VNA00JCompliant3(testLengthInMs);
+
+            tests.add(test);
+            tasks.add(Executors.callable(test));
+        }
+
+        System.out.println("\nVNA00J: Compliant #3 (synchronization).");
         System.out.println("\nExecuting " + parallelTests + " tests...");
 
         final ExecutorService executorService = Executors.newFixedThreadPool(parallelTests, new ThreadFactory() {

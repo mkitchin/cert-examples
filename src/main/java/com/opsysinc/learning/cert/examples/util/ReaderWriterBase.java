@@ -213,10 +213,9 @@ public class ReaderWriterBase<T extends Comparable> {
                     lastReaderValue = logItem.getData();
                     lastReaderTime = logItem.getTime();
 
-                    if ((lastReaderTime > lastWriterTime) &&
-                            (lastReaderValue != lastWriterValue)) {
+                    if (lastReaderTime > lastWriterTime) {
 
-                        if ((lastReaderValue == null) || (lastWriterValue == null) ||
+                        if (((lastReaderValue != null) && (lastWriterValue != null)) &&
                                 (lastReaderValue.compareTo(lastWriterValue) < 0)) {
 
                             result = true;
@@ -273,10 +272,9 @@ public class ReaderWriterBase<T extends Comparable> {
                     lastReaderValue = logItem.getData();
                     lastReaderTime = logItem.getTime();
 
-                    if ((lastReaderTime > lastWriterTime) &&
-                            (lastReaderValue != lastWriterValue)) {
+                    if (lastReaderTime > lastWriterTime) {
 
-                        if ((lastReaderValue == null) || (lastWriterValue == null) ||
+                        if (((lastReaderValue != null) && (lastWriterValue != null)) &&
                                 (lastReaderValue.compareTo(lastWriterValue) < 0)) {
 
                             isOutOfOrder = true;
