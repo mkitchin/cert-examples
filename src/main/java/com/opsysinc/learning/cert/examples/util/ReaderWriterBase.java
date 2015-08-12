@@ -108,9 +108,11 @@ public class ReaderWriterBase<T extends Comparable> {
      * Log for reader.
      *
      * @param readerData Reader data.
+     * @param sampleTime Sample time.
      * @return True if logged, false otherwise.
      */
-    public boolean logReader(final T readerData) {
+    public boolean logReader(final T readerData,
+                             final long sampleTime) {
 
         final boolean result = false;
 
@@ -120,7 +122,8 @@ public class ReaderWriterBase<T extends Comparable> {
                     !readerData.equals(this.lastReaderData)) {
 
                 this.lastReaderData = readerData;
-                this.readerLog.add(new ReaderWriterBase.TimingEntry<T>(true, readerData));
+                this.readerLog.add(new ReaderWriterBase.TimingEntry<T>(
+                        true, readerData, sampleTime));
             }
         }
 
@@ -131,9 +134,11 @@ public class ReaderWriterBase<T extends Comparable> {
      * Log for writer.
      *
      * @param writerData Writer data.
+     * @param sampleTime Sample time.
      * @return True if logged, false otherwise.
      */
-    public boolean logWriter(final T writerData) {
+    public boolean logWriter(final T writerData,
+                             final long sampleTime) {
 
         final boolean result = false;
 
@@ -143,7 +148,8 @@ public class ReaderWriterBase<T extends Comparable> {
                     !writerData.equals(this.lastWriterData)) {
 
                 this.lastWriterData = writerData;
-                this.writerLog.add(new ReaderWriterBase.TimingEntry<T>(false, writerData));
+                this.writerLog.add(new ReaderWriterBase.TimingEntry<T>(
+                        false, writerData, sampleTime));
             }
         }
 
@@ -387,16 +393,17 @@ public class ReaderWriterBase<T extends Comparable> {
         /**
          * Basic ctor.
          *
-         * @param isReader True if reader, false otherwise.
-         * @param data     Payload.
+         * @param isReader   True if reader, false otherwise.
+         * @param data       Payload.
+         * @param sampleTime Sample time.
          */
         public TimingEntry(final boolean isReader,
-                           final T data) {
+                           final T data,
+                           final long sampleTime) {
 
             this.isReader = isReader;
             this.data = data;
-
-            this.time = System.currentTimeMillis();
+            this.time = sampleTime;
         }
 
         /**

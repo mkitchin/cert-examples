@@ -35,7 +35,8 @@ public class VNA00JCompliant2 extends VNA00JBase {
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant2.this.logReader(VNA00JCompliant2.this.currentValue.get());
+                VNA00JCompliant2.this.logReader(VNA00JCompliant2.this.currentValue.get(),
+                        System.currentTimeMillis());
             }
 
             @Override
@@ -59,7 +60,8 @@ public class VNA00JCompliant2 extends VNA00JBase {
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant2.this.logWriter(VNA00JCompliant2.this.currentValue.incrementAndGet());
+                VNA00JCompliant2.this.logWriter(VNA00JCompliant2.this.currentValue.incrementAndGet(),
+                        System.currentTimeMillis());
             }
 
             @Override

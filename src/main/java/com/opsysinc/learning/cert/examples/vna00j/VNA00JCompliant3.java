@@ -34,7 +34,8 @@ public class VNA00JCompliant3 extends VNA00JBase {
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant3.this.logReader(VNA00JCompliant3.this.getCurrentValue());
+                VNA00JCompliant3.this.logReader(VNA00JCompliant3.this.getCurrentValue(),
+                        System.currentTimeMillis());
             }
 
             @Override
@@ -58,7 +59,8 @@ public class VNA00JCompliant3 extends VNA00JBase {
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant3.this.logWriter(VNA00JCompliant3.this.setCurrentValue());
+                VNA00JCompliant3.this.logWriter(VNA00JCompliant3.this.setCurrentValue(),
+                        System.currentTimeMillis());
             }
 
             @Override

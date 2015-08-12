@@ -52,6 +52,7 @@ public final class Main {
             Main.testVNA00JNonCompliant(parallelTests, testLengthInMs);
             Main.testVNA00JCompliant1(parallelTests, testLengthInMs);
             Main.testVNA00JCompliant2(parallelTests, testLengthInMs);
+            Main.testVNA00JCompliant3(parallelTests, testLengthInMs);
 
         } catch (final Exception ex) {
 
