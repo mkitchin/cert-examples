@@ -2,10 +2,10 @@ package com.opsysinc.learning.cert.examples.util;
 
 
 import java.util.*;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Reader/writer base class.
@@ -15,14 +15,9 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ReaderWriterBase<T extends Comparable> {
 
     /**
-     * Start up latch.
-     */
-    private CountDownLatch startUpLatch;
-
-    /**
      * Timing map.
      */
-    private Map<Long, List<ReaderWriterBase.SampleEntry<T>>> timingMap;
+    private Map<Long, List<ReaderWriterBase.SampleEntry<T>>> sortedSamples;
 
     /**
      * Reader threads.
@@ -40,11 +35,6 @@ public class ReaderWriterBase<T extends Comparable> {
     private List<ReaderWriterBase.ReaderWriterWorker<T>> writerWorkers;
 
     /**
-     * Log lock.
-     */
-    private ReentrantLock logLock;
-
-    /**
      * Start up.
      *
      * @param readerWorkers Readers.
@@ -58,15 +48,22 @@ public class ReaderWriterBase<T extends Comparable> {
 
         final int totalWorkers = (this.readerWorkers.size() + this.writerWorkers.size());
 
-        this.startUpLatch = new CountDownLatch(totalWorkers + 1);
-        this.logLock = new ReentrantLock(true);
+        final CountDownLatch startUpLatch = new CountDownLatch(totalWorkers + 1);
+        final CyclicBarrier workerBarrier = new CyclicBarrier(totalWorkers, new Runnable() {
+
+            @Override
+            public void run() {
+
+                ReaderWriterBase.this.setWorkTime(System.nanoTime());
+            }
+        });
 
         this.workerThreads = new ArrayList<>();
 
         for (final ReaderWriterBase.ReaderWriterWorker<T> item : readerWorkers) {
 
-            item.setStartUpLatch(this.startUpLatch);
-            item.setLogLock(this.logLock);
+            item.setStartUpLatch(startUpLatch);
+            item.setWorkBarrier(workerBarrier);
 
             final Thread readerThread = new Thread(item);
 
@@ -78,8 +75,8 @@ public class ReaderWriterBase<T extends Comparable> {
 
         for (final ReaderWriterBase.ReaderWriterWorker<T> item : writerWorkers) {
 
-            item.setStartUpLatch(this.startUpLatch);
-            item.setLogLock(this.logLock);
+            item.setStartUpLatch(startUpLatch);
+            item.setWorkBarrier(workerBarrier);
 
             final Thread writerThread = new Thread(item);
 
@@ -89,7 +86,24 @@ public class ReaderWriterBase<T extends Comparable> {
             this.workerThreads.add(writerThread);
         }
 
-        this.startUpLatch.countDown();
+        startUpLatch.countDown();
+    }
+
+    /**
+     * Set work time.
+     *
+     * @param workTime Work time.
+     */
+    private void setWorkTime(final long workTime) {
+
+        for (final List<ReaderWriterBase.ReaderWriterWorker<T>> listItem :
+                Arrays.asList(this.writerWorkers, this.readerWorkers)) {
+
+            for (final ReaderWriterBase.ReaderWriterWorker<T> workerItem : listItem) {
+
+                workerItem.setWorkTime(workTime);
+            }
+        }
     }
 
     /**
@@ -115,12 +129,13 @@ public class ReaderWriterBase<T extends Comparable> {
      *
      * @param isToForce True to force build, false otherwise.
      */
-    public void checkTimingMap(final boolean isToForce) {
+    private void checkSortedSamples(final boolean isToForce) {
 
         if (isToForce ||
-                (this.timingMap == null)) {
+                (this.sortedSamples == null)) {
 
-            final Map<Long, List<ReaderWriterBase.SampleEntry<T>>> tempTimingMap = new TreeMap<>();
+            final Map<Long, List<ReaderWriterBase.SampleEntry<T>>> tempSortedSamples = new TreeMap<>();
+            final int totalWorkers = (this.readerWorkers.size() + this.writerWorkers.size());
 
             for (final List<ReaderWriterBase.ReaderWriterWorker<T>> listItem :
                     Arrays.asList(this.writerWorkers, this.readerWorkers)) {
@@ -129,20 +144,37 @@ public class ReaderWriterBase<T extends Comparable> {
 
                     for (final ReaderWriterBase.SampleEntry<T> sampleItem : workerItem.getSampleLog()) {
 
-                        List<ReaderWriterBase.SampleEntry<T>> entries = tempTimingMap.get(sampleItem.getTime());
+                        List<ReaderWriterBase.SampleEntry<T>> sampleList = tempSortedSamples.get(sampleItem.getTime());
 
-                        if (entries == null) {
+                        if (sampleList == null) {
 
-                            entries = new ArrayList<>();
-                            tempTimingMap.put(sampleItem.getTime(), entries);
+                            sampleList = new ArrayList<>(totalWorkers);
+                            tempSortedSamples.put(sampleItem.getTime(), sampleList);
                         }
 
-                        entries.add(sampleItem);
+                        sampleList.add(sampleItem);
                     }
                 }
             }
 
-            this.timingMap = tempTimingMap;
+            this.sortedSamples = tempSortedSamples;
+        }
+    }
+
+    /**
+     * Clear sorted samples.
+     */
+    public void clearSamples() {
+
+        this.sortedSamples = null;
+
+        for (final List<ReaderWriterBase.ReaderWriterWorker<T>> listItem :
+                Arrays.asList(this.writerWorkers, this.readerWorkers)) {
+
+            for (final ReaderWriterBase.ReaderWriterWorker<T> workerItem : listItem) {
+
+                workerItem.getSampleLog().clear();
+            }
         }
     }
 
@@ -151,46 +183,42 @@ public class ReaderWriterBase<T extends Comparable> {
      *
      * @return True if reader/writer logs out of order, false otherwise.
      */
-
     public boolean checkOrder() {
 
         boolean result = false;
-        this.checkTimingMap(false);
+        this.checkSortedSamples(false);
 
-        T lastReaderValue = null;
-        long lastReaderTime = 0L;
+        for (final Map.Entry<Long, List<ReaderWriterBase.SampleEntry<T>>> entryItem : this.sortedSamples.entrySet()) {
 
-        T lastWriterValue = null;
-        long lastWriterTime = 0L;
+            T lowestReaderValue = null;
+            T highestWriterValue = null;
 
-        for (final Map.Entry<Long, List<ReaderWriterBase.SampleEntry<T>>> entryItem : this.timingMap.entrySet()) {
+            for (final ReaderWriterBase.SampleEntry<T> sampleItem : entryItem.getValue()) {
 
-            for (final ReaderWriterBase.SampleEntry<T> logItem : entryItem.getValue()) {
+                final T sampleValue = sampleItem.getData();
 
-                if (logItem.isReader()) {
+                if (sampleItem.isReader()) {
 
-                    lastReaderValue = logItem.getData();
-                    lastReaderTime = logItem.getTime();
+                    if ((lowestReaderValue == null) ||
+                            (lowestReaderValue.compareTo(sampleValue) > 0)) {
 
-                    if (lastReaderTime > lastWriterTime) {
-
-                        if (((lastReaderValue != null) && (lastWriterValue != null)) &&
-                                (lastReaderValue.compareTo(lastWriterValue) < 0)) {
-
-                            result = true;
-                            break;
-                        }
+                        lowestReaderValue = sampleValue;
                     }
 
                 } else {
 
-                    lastWriterValue = logItem.getData();
-                    lastWriterTime = logItem.getTime();
+                    if ((highestWriterValue == null) ||
+                            (highestWriterValue.compareTo(sampleValue) < 0)) {
+
+                        highestWriterValue = sampleValue;
+                    }
                 }
             }
 
-            if (result) {
+            if ((lowestReaderValue != null) && (highestWriterValue != null) &&
+                    (highestWriterValue.compareTo(lowestReaderValue) > 0)) {
 
+                result = true;
                 break;
             }
         }
@@ -222,82 +250,65 @@ public class ReaderWriterBase<T extends Comparable> {
             }
         }
 
-        final int totalSamples = (readerSamples + writerSamples);
-        System.out.println(String.format("\nLog samples - reader=%d, writer=%d, total=%d.",
-                readerSamples, writerSamples, totalSamples));
+        System.out.println(String.format("\nTime samples - total=%d",
+                this.sortedSamples.size()));
+        System.out.println(String.format("Log entries - reader=%d, writer=%d, total=%d",
+                readerSamples, writerSamples, (readerSamples + writerSamples)));
+        this.checkSortedSamples(false);
 
-        this.checkTimingMap(false);
-
-        T lastReaderValue = null;
-        long lastReaderTime = 0L;
-
-        T lastWriterValue = null;
-        long lastWriterTime = 0L;
-
-        final Deque<String> lines = new ArrayDeque<>();
         int sampleCtr = 0;
+        int outOfOrderCtr = 0;
 
-        boolean isOutOfOrder = false;
+        for (final Map.Entry<Long, List<ReaderWriterBase.SampleEntry<T>>> entryItem : this.sortedSamples.entrySet()) {
 
-        for (final Map.Entry<Long, List<ReaderWriterBase.SampleEntry<T>>> entryItem : this.timingMap.entrySet()) {
+            sampleCtr++;
 
-            for (final ReaderWriterBase.SampleEntry<T> logItem : entryItem.getValue()) {
+            T lowestReaderValue = null;
+            T highestWriterValue = null;
 
-                String flagText = "";
+            for (final ReaderWriterBase.SampleEntry<T> sampleItem : entryItem.getValue()) {
 
-                if (logItem.isReader()) {
+                final T sampleValue = sampleItem.getData();
 
-                    lastReaderValue = logItem.getData();
-                    lastReaderTime = logItem.getTime();
+                if (sampleItem.isReader()) {
 
-                    if (lastReaderTime > lastWriterTime) {
+                    if ((lowestReaderValue == null) ||
+                            (lowestReaderValue.compareTo(sampleValue) > 0)) {
 
-                        if (((lastReaderValue != null) && (lastWriterValue != null)) &&
-                                (lastReaderValue.compareTo(lastWriterValue) < 0)) {
-
-                            isOutOfOrder = true;
-                            flagText = " / ***";
-                        }
+                        lowestReaderValue = sampleValue;
                     }
 
                 } else {
 
-                    lastWriterValue = logItem.getData();
-                    lastWriterTime = logItem.getTime();
-                }
+                    if ((highestWriterValue == null) ||
+                            (highestWriterValue.compareTo(sampleValue) < 0)) {
 
-                final String line = String.format("%s / %s / %s%s",
-                        (logItem.isReader() ? "READER" : "WRITER"),
-                        String.valueOf(logItem.getTime()),
-                        String.valueOf(logItem.getData()),
-                        flagText);
-                lines.addLast(line);
-
-                while (lines.size() > 10) {
-
-                    lines.removeFirst();
-                }
-
-                sampleCtr++;
-
-                if (isOutOfOrder) {
-
-                    System.out.println(String.format("\nEntry #%d:\n", sampleCtr));
-
-                    for (final String item : lines) {
-
-                        System.out.println(item);
+                        highestWriterValue = sampleValue;
                     }
-
-                    System.out.println(String.format("\n((Skipping %d samples))",
-                            (totalSamples - sampleCtr)));
-                    break;
                 }
             }
 
-            if (isOutOfOrder) {
+            if ((lowestReaderValue != null) && (highestWriterValue != null) &&
+                    (highestWriterValue.compareTo(lowestReaderValue) > 0)) {
 
-                break;
+                outOfOrderCtr++;
+                System.out.println(String.format("\nEntry #%d:\n", sampleCtr));
+
+                for (final ReaderWriterBase.SampleEntry<T> sampleItem : entryItem.getValue()) {
+
+                    System.out.println(String.format("%s / %s / %s%s",
+                            (sampleItem.isReader() ? "READER" : "WRITER"),
+                            String.valueOf(sampleItem.getTime()),
+                            String.valueOf(sampleItem.getData()),
+                            ((sampleItem.isReader() && sampleItem.getData().equals(lowestReaderValue)) ? " / ***" : "")));
+                }
+
+                if (outOfOrderCtr > 4) {
+
+                    System.out.println(String.format("\n((Skipping %d time samples))",
+                            (this.sortedSamples.size() - sampleCtr)));
+                    break;
+                }
             }
         }
     }
@@ -305,7 +316,7 @@ public class ReaderWriterBase<T extends Comparable> {
     /**
      * Base worker class.
      */
-    public abstract static class ReaderWriterWorker<T> implements Runnable {
+    protected abstract static class ReaderWriterWorker<T> implements Runnable {
 
         /**
          * Reader log.
@@ -328,9 +339,14 @@ public class ReaderWriterBase<T extends Comparable> {
         private CountDownLatch startUpLatch;
 
         /**
-         * Log lock.
+         * Work barrier
          */
-        private ReentrantLock logLock;
+        private CyclicBarrier workBarrier;
+
+        /**
+         * Work time.
+         */
+        private long workTime;
 
         /**
          * Basic ctor.
@@ -353,11 +369,14 @@ public class ReaderWriterBase<T extends Comparable> {
 
                 while (!Thread.interrupted()) {
 
+                    this.workBarrier.await();
+
                     this.runImpl();
                     Thread.sleep(1L);
                 }
 
-            } catch (final InterruptedException ex) {
+            } catch (final InterruptedException |
+                    BrokenBarrierException ex) {
 
                 // ignore;
 
@@ -387,25 +406,13 @@ public class ReaderWriterBase<T extends Comparable> {
          *
          * @param data Sample data.
          * @param time Sample time.
-         * @return True if logged, false otherwise.
          */
-        public boolean logSample(final T data,
-                                 final long time) {
+        public void logSample(final T data,
+                              final long time) {
 
-            this.logLock.lock();
-
-            try {
-
-                this.prevData = data;
-                this.sampleLog.add(new ReaderWriterBase.SampleEntry<>(this.isReader, data,
-                        ((time < 1L) ? System.nanoTime() : time)));
-
-            } finally {
-
-                this.logLock.unlock();
-            }
-
-            return true;
+            this.prevData = data;
+            this.sampleLog.add(new ReaderWriterBase.SampleEntry<>(this.isReader, data,
+                    ((time < 1L) ? this.workTime : time)));
         }
 
         /**
@@ -439,20 +446,30 @@ public class ReaderWriterBase<T extends Comparable> {
         }
 
         /**
-         * Sets log lock.
+         * Sets work barrier.
          *
-         * @param logLock Log lock.
+         * @param workBarrier Work barrier.
          */
-        public void setLogLock(final ReentrantLock logLock) {
+        public void setWorkBarrier(final CyclicBarrier workBarrier) {
 
-            this.logLock = logLock;
+            this.workBarrier = workBarrier;
+        }
+
+        /**
+         * Sets work time.
+         *
+         * @param workTime Work time.
+         */
+        public void setWorkTime(final long workTime) {
+
+            this.workTime = workTime;
         }
     }
 
     /**
      * Timing entry.
      */
-    public static class SampleEntry<T> {
+    protected static class SampleEntry<T> {
 
         /**
          * Data.

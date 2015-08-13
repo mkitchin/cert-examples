@@ -20,7 +20,7 @@ public final class Main {
     /**
      * Default parallel tests.
      */
-    private static final int DEFAULT_PARALLEL_TESTS = 100;
+    private static final int DEFAULT_PARALLEL_TESTS = 10;
 
     /**
      * Main driver method.
@@ -116,6 +116,8 @@ public final class Main {
 
                 outOfOrderCtr++;
             }
+
+            item.clearSamples();
         }
 
         System.out.println(String.format("\n%d of %d logs out of order.",
@@ -179,6 +181,8 @@ public final class Main {
 
                 outOfOrderCtr++;
             }
+
+            item.clearSamples();
         }
 
         System.out.println(String.format("\n%d of %d logs out of order.",
@@ -242,6 +246,8 @@ public final class Main {
 
                 outOfOrderCtr++;
             }
+
+            item.clearSamples();
         }
 
         System.out.println(String.format("\n%d of %d logs out of order.",
@@ -305,6 +311,8 @@ public final class Main {
 
                 outOfOrderCtr++;
             }
+
+            item.clearSamples();
         }
 
         System.out.println(String.format("\n%d of %d logs out of order.",
