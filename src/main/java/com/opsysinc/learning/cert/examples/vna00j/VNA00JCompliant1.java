@@ -1,5 +1,7 @@
 package com.opsysinc.learning.cert.examples.vna00j;
 
+import com.opsysinc.learning.cert.examples.util.ReaderWriterBase;
+
 /**
  * VNA00-J. Ensure visibility when accessing shared primitive variables.
  * <p/>
@@ -25,46 +27,27 @@ public class VNA00JCompliant1 extends VNA00JBase {
     }
 
     @Override
-    protected Runnable buildReaderWorker() {
+    protected ReaderWriterBase.ReaderWriterWorker<Integer> buildReaderWorker() {
 
-        return new WorkerBase() {
+        return new ReaderWriterBase.ReaderWriterWorker<Integer>(true) {
 
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant1.this.logReader(VNA00JCompliant1.this.currentValue,
-                        System.currentTimeMillis());
-            }
-
-            @Override
-            protected long sleepTimeInMs() {
-
-                return 1L;
+                this.logSample(VNA00JCompliant1.this.currentValue, System.currentTimeMillis());
             }
         };
     }
 
     @Override
-    protected Runnable buildWriterWorker() {
+    protected ReaderWriterBase.ReaderWriterWorker<Integer> buildWriterWorker() {
 
-        return new WorkerBase() {
-
-            /**
-             * Counter.
-             */
-            private long counter;
+        return new ReaderWriterBase.ReaderWriterWorker<Integer>(false) {
 
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant1.this.logWriter(++VNA00JCompliant1.this.currentValue,
-                        System.currentTimeMillis());
-            }
-
-            @Override
-            protected long sleepTimeInMs() {
-
-                return 1L;
+                this.logSample(++VNA00JCompliant1.this.currentValue, System.currentTimeMillis());
             }
         };
     }

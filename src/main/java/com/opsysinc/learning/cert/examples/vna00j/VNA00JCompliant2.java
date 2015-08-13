@@ -1,5 +1,7 @@
 package com.opsysinc.learning.cert.examples.vna00j;
 
+import com.opsysinc.learning.cert.examples.util.ReaderWriterBase;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -14,7 +16,7 @@ public class VNA00JCompliant2 extends VNA00JBase {
     /**
      * Current value.
      */
-    private AtomicInteger currentValue;
+    private final AtomicInteger currentValue;
 
     /**
      * Basic ctor.
@@ -28,46 +30,27 @@ public class VNA00JCompliant2 extends VNA00JBase {
     }
 
     @Override
-    protected Runnable buildReaderWorker() {
+    protected ReaderWriterBase.ReaderWriterWorker<Integer> buildReaderWorker() {
 
-        return new WorkerBase() {
+        return new ReaderWriterBase.ReaderWriterWorker<Integer>(true) {
 
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant2.this.logReader(VNA00JCompliant2.this.currentValue.get(),
-                        System.currentTimeMillis());
-            }
-
-            @Override
-            protected long sleepTimeInMs() {
-
-                return 1L;
+                this.logSample(VNA00JCompliant2.this.currentValue.get(), System.currentTimeMillis());
             }
         };
     }
 
     @Override
-    protected Runnable buildWriterWorker() {
+    protected ReaderWriterBase.ReaderWriterWorker<Integer> buildWriterWorker() {
 
-        return new WorkerBase() {
-
-            /**
-             * Counter.
-             */
-            private long counter;
+        return new ReaderWriterBase.ReaderWriterWorker<Integer>(false) {
 
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant2.this.logWriter(VNA00JCompliant2.this.currentValue.incrementAndGet(),
-                        System.currentTimeMillis());
-            }
-
-            @Override
-            protected long sleepTimeInMs() {
-
-                return 1L;
+                this.logSample(VNA00JCompliant2.this.currentValue.incrementAndGet(), System.currentTimeMillis());
             }
         };
     }

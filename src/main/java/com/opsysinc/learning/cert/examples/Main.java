@@ -20,7 +20,7 @@ public final class Main {
     /**
      * Default parallel tests.
      */
-    private static final int DEFAULT_PARALLEL_TESTS = 250;
+    private static final int DEFAULT_PARALLEL_TESTS = 100;
 
     /**
      * Main driver method.

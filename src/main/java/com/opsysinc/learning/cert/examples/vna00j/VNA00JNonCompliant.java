@@ -27,46 +27,27 @@ public class VNA00JNonCompliant extends VNA00JBase {
     }
 
     @Override
-    protected Runnable buildReaderWorker() {
+    protected ReaderWriterBase.ReaderWriterWorker<Integer> buildReaderWorker() {
 
-        return new ReaderWriterBase.WorkerBase() {
+        return new ReaderWriterBase.ReaderWriterWorker<Integer>(true) {
 
             @Override
             protected void runImpl() {
 
-                VNA00JNonCompliant.this.logReader(VNA00JNonCompliant.this.currentValue,
-                        System.currentTimeMillis());
-            }
-
-            @Override
-            protected long sleepTimeInMs() {
-
-                return 1L;
+                this.logSample(VNA00JNonCompliant.this.currentValue, System.currentTimeMillis());
             }
         };
     }
 
     @Override
-    protected Runnable buildWriterWorker() {
+    protected ReaderWriterBase.ReaderWriterWorker<Integer> buildWriterWorker() {
 
-        return new ReaderWriterBase.WorkerBase() {
-
-            /**
-             * Counter.
-             */
-            private long counter;
+        return new ReaderWriterBase.ReaderWriterWorker<Integer>(false) {
 
             @Override
             protected void runImpl() {
 
-                VNA00JNonCompliant.this.logWriter(++VNA00JNonCompliant.this.currentValue,
-                        System.currentTimeMillis());
-            }
-
-            @Override
-            protected long sleepTimeInMs() {
-
-                return 1L;
+                this.logSample(++VNA00JNonCompliant.this.currentValue, System.currentTimeMillis());
             }
         };
     }

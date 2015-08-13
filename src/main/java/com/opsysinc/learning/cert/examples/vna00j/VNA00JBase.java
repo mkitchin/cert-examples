@@ -2,6 +2,11 @@ package com.opsysinc.learning.cert.examples.vna00j;
 
 import com.opsysinc.learning.cert.examples.util.ReaderWriterBase;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * VNA00-J. Ensure visibility when accessing shared primitive variables.
  * <p/>
@@ -14,7 +19,7 @@ public abstract class VNA00JBase extends ReaderWriterBase<Integer> implements Ru
     /**
      * Default test length in MS.
      */
-    private static final long DEFAULT_TEST_LENGTH_IN_MS = 30000L;
+    private static final long DEFAULT_TEST_LENGTH_IN_MS = 60000L;
 
     /**
      * Test length in MS.
@@ -37,9 +42,14 @@ public abstract class VNA00JBase extends ReaderWriterBase<Integer> implements Ru
 
         try {
 
+            final List<ReaderWriterBase.ReaderWriterWorker<Integer>> readerWorkers = new ArrayList<>();
 
-            this.startUp(this.buildReaderWorker(),
-                    this.buildWriterWorker());
+            for (int ctr = 0; ctr < 10; ctr++) {
+
+                readerWorkers.add(this.buildReaderWorker());
+            }
+
+            this.startUp(readerWorkers, Collections.singletonList(this.buildWriterWorker()));
             Thread.sleep(this.testLengthInMs);
 
             this.cleanUp();
@@ -55,12 +65,12 @@ public abstract class VNA00JBase extends ReaderWriterBase<Integer> implements Ru
      *
      * @return Reader worker.
      */
-    protected abstract Runnable buildReaderWorker();
+    protected abstract ReaderWriterBase.ReaderWriterWorker<Integer> buildReaderWorker();
 
     /**
      * Builds writer worker.
      *
      * @return Writer worker.
      */
-    protected abstract Runnable buildWriterWorker();
+    protected abstract ReaderWriterBase.ReaderWriterWorker<Integer> buildWriterWorker();
 }

@@ -1,5 +1,7 @@
 package com.opsysinc.learning.cert.examples.vna00j;
 
+import com.opsysinc.learning.cert.examples.util.ReaderWriterBase;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -27,46 +29,27 @@ public class VNA00JCompliant3 extends VNA00JBase {
     }
 
     @Override
-    protected Runnable buildReaderWorker() {
+    protected ReaderWriterBase.ReaderWriterWorker<Integer> buildReaderWorker() {
 
-        return new WorkerBase() {
+        return new ReaderWriterBase.ReaderWriterWorker<Integer>(true) {
 
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant3.this.logReader(VNA00JCompliant3.this.getCurrentValue(),
-                        System.currentTimeMillis());
-            }
-
-            @Override
-            protected long sleepTimeInMs() {
-
-                return 1L;
+                this.logSample(VNA00JCompliant3.this.getCurrentValue(), System.currentTimeMillis());
             }
         };
     }
 
     @Override
-    protected Runnable buildWriterWorker() {
+    protected ReaderWriterBase.ReaderWriterWorker<Integer> buildWriterWorker() {
 
-        return new WorkerBase() {
-
-            /**
-             * Counter.
-             */
-            private long counter;
+        return new ReaderWriterBase.ReaderWriterWorker<Integer>(false) {
 
             @Override
             protected void runImpl() {
 
-                VNA00JCompliant3.this.logWriter(VNA00JCompliant3.this.setCurrentValue(),
-                        System.currentTimeMillis());
-            }
-
-            @Override
-            protected long sleepTimeInMs() {
-
-                return 1L;
+                this.logSample(VNA00JCompliant3.this.setCurrentValue(), System.currentTimeMillis());
             }
         };
     }
