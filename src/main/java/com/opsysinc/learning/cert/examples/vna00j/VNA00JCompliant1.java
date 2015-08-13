@@ -34,7 +34,7 @@ public class VNA00JCompliant1 extends VNA00JBase {
             @Override
             protected void runImpl() {
 
-                this.logSample(VNA00JCompliant1.this.currentValue, System.currentTimeMillis());
+                this.logSample(VNA00JCompliant1.this.currentValue, 0L);
             }
         };
     }
@@ -47,7 +47,7 @@ public class VNA00JCompliant1 extends VNA00JBase {
             @Override
             protected void runImpl() {
 
-                this.logSample(++VNA00JCompliant1.this.currentValue, System.currentTimeMillis());
+                this.logSample(++VNA00JCompliant1.this.currentValue, 0L);
             }
         };
     }

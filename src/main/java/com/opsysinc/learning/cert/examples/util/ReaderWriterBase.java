@@ -5,6 +5,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Reader/writer base class.
@@ -39,6 +40,11 @@ public class ReaderWriterBase<T extends Comparable> {
     private List<ReaderWriterBase.ReaderWriterWorker<T>> writerWorkers;
 
     /**
+     * Log lock.
+     */
+    private ReentrantLock logLock;
+
+    /**
      * Start up.
      *
      * @param readerWorkers Readers.
@@ -51,13 +57,17 @@ public class ReaderWriterBase<T extends Comparable> {
         this.writerWorkers = writerWorkers;
 
         final int totalWorkers = (this.readerWorkers.size() + this.writerWorkers.size());
+
         this.startUpLatch = new CountDownLatch(totalWorkers + 1);
+        this.logLock = new ReentrantLock(true);
 
         this.workerThreads = new ArrayList<>();
 
         for (final ReaderWriterBase.ReaderWriterWorker<T> item : readerWorkers) {
 
             item.setStartUpLatch(this.startUpLatch);
+            item.setLogLock(this.logLock);
+
             final Thread readerThread = new Thread(item);
 
             readerThread.setDaemon(true);
@@ -69,6 +79,8 @@ public class ReaderWriterBase<T extends Comparable> {
         for (final ReaderWriterBase.ReaderWriterWorker<T> item : writerWorkers) {
 
             item.setStartUpLatch(this.startUpLatch);
+            item.setLogLock(this.logLock);
+
             final Thread writerThread = new Thread(item);
 
             writerThread.setDaemon(true);
@@ -223,7 +235,7 @@ public class ReaderWriterBase<T extends Comparable> {
         long lastWriterTime = 0L;
 
         final Deque<String> lines = new ArrayDeque<>();
-        int entryCtr = 0;
+        int sampleCtr = 0;
 
         boolean isOutOfOrder = false;
 
@@ -266,19 +278,26 @@ public class ReaderWriterBase<T extends Comparable> {
                     lines.removeFirst();
                 }
 
-                entryCtr++;
+                sampleCtr++;
 
                 if (isOutOfOrder) {
 
-                    System.out.println(String.format("\nEntry #%d:\n", entryCtr));
+                    System.out.println(String.format("\nEntry #%d:\n", sampleCtr));
 
                     for (final String item : lines) {
 
                         System.out.println(item);
                     }
 
-                    isOutOfOrder = false;
+                    System.out.println(String.format("\n((Skipping %d samples))",
+                            (totalSamples - sampleCtr)));
+                    break;
                 }
+            }
+
+            if (isOutOfOrder) {
+
+                break;
             }
         }
     }
@@ -307,6 +326,11 @@ public class ReaderWriterBase<T extends Comparable> {
          * Start up latch.
          */
         private CountDownLatch startUpLatch;
+
+        /**
+         * Log lock.
+         */
+        private ReentrantLock logLock;
 
         /**
          * Basic ctor.
@@ -368,9 +392,18 @@ public class ReaderWriterBase<T extends Comparable> {
         public boolean logSample(final T data,
                                  final long time) {
 
-            this.prevData = data;
-            this.sampleLog.add(new ReaderWriterBase.SampleEntry<>(this.isReader, data,
-                    ((time < 1L) ? System.currentTimeMillis() : time)));
+            this.logLock.lock();
+
+            try {
+
+                this.prevData = data;
+                this.sampleLog.add(new ReaderWriterBase.SampleEntry<>(this.isReader, data,
+                        ((time < 1L) ? System.nanoTime() : time)));
+
+            } finally {
+
+                this.logLock.unlock();
+            }
 
             return true;
         }
@@ -403,6 +436,16 @@ public class ReaderWriterBase<T extends Comparable> {
         public T getPrevData() {
 
             return this.prevData;
+        }
+
+        /**
+         * Sets log lock.
+         *
+         * @param logLock Log lock.
+         */
+        public void setLogLock(final ReentrantLock logLock) {
+
+            this.logLock = logLock;
         }
     }
 
