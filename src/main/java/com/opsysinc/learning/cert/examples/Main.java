@@ -76,7 +76,8 @@ public final class Main {
 
         for (int ctr = 0; ctr < parallelTests; ctr++) {
 
-            final VNA00JBase test = new VNA00JNonCompliant(testLengthInMs);
+            final VNA00JBase test = new VNA00JNonCompliant(
+                    String.format("Test #%d", (ctr + 1)), testLengthInMs);
 
             tests.add(test);
             tasks.add(Executors.callable(test));
@@ -100,28 +101,6 @@ public final class Main {
         executorService.invokeAll(tasks);
         executorService.shutdown();
 
-        System.out.println("Checking " + parallelTests + " logs...");
-
-        int ctr = 0;
-        int outOfOrderCtr = 0;
-
-        for (final ReaderWriterBase item : tests) {
-
-            ctr++;
-
-            if (item.checkOrder()) {
-
-                System.out.println("\nTest #" + ctr + ": OUT OF ORDER");
-                item.dumpLogs();
-
-                outOfOrderCtr++;
-            }
-
-            item.clearSamples();
-        }
-
-        System.out.println(String.format("\n%d of %d logs out of order.",
-                outOfOrderCtr, parallelTests));
         System.out.println("\n...Done.");
     }
 
@@ -141,7 +120,8 @@ public final class Main {
 
         for (int ctr = 0; ctr < parallelTests; ctr++) {
 
-            final VNA00JBase test = new VNA00JCompliant1(testLengthInMs);
+            final VNA00JBase test = new VNA00JCompliant1(
+                    String.format("Test #%d", (ctr + 1)), testLengthInMs);
 
             tests.add(test);
             tasks.add(Executors.callable(test));
@@ -165,28 +145,6 @@ public final class Main {
         executorService.invokeAll(tasks);
         executorService.shutdown();
 
-        System.out.println("Checking " + parallelTests + " logs...");
-
-        int ctr = 0;
-        int outOfOrderCtr = 0;
-
-        for (final ReaderWriterBase item : tests) {
-
-            ctr++;
-
-            if (item.checkOrder()) {
-
-                System.out.println("\nTest #" + ctr + ": OUT OF ORDER");
-                item.dumpLogs();
-
-                outOfOrderCtr++;
-            }
-
-            item.clearSamples();
-        }
-
-        System.out.println(String.format("\n%d of %d logs out of order.",
-                outOfOrderCtr, parallelTests));
         System.out.println("\n...Done.");
     }
 
@@ -206,7 +164,8 @@ public final class Main {
 
         for (int ctr = 0; ctr < parallelTests; ctr++) {
 
-            final VNA00JBase test = new VNA00JCompliant2(testLengthInMs);
+            final VNA00JBase test = new VNA00JCompliant2(
+                    String.format("Test #%d", (ctr + 1)), testLengthInMs);
 
             tests.add(test);
             tasks.add(Executors.callable(test));
@@ -230,28 +189,6 @@ public final class Main {
         executorService.invokeAll(tasks);
         executorService.shutdown();
 
-        System.out.println("Checking " + parallelTests + " logs...");
-
-        int ctr = 0;
-        int outOfOrderCtr = 0;
-
-        for (final ReaderWriterBase item : tests) {
-
-            ctr++;
-
-            if (item.checkOrder()) {
-
-                System.out.println("\nTest #" + ctr + ": OUT OF ORDER");
-                item.dumpLogs();
-
-                outOfOrderCtr++;
-            }
-
-            item.clearSamples();
-        }
-
-        System.out.println(String.format("\n%d of %d logs out of order.",
-                outOfOrderCtr, parallelTests));
         System.out.println("\n...Done.");
     }
 
@@ -271,7 +208,8 @@ public final class Main {
 
         for (int ctr = 0; ctr < parallelTests; ctr++) {
 
-            final VNA00JBase test = new VNA00JCompliant3(testLengthInMs);
+            final VNA00JBase test = new VNA00JCompliant3(
+                    String.format("Test #%d", (ctr + 1)), testLengthInMs);
 
             tests.add(test);
             tasks.add(Executors.callable(test));
@@ -295,28 +233,6 @@ public final class Main {
         executorService.invokeAll(tasks);
         executorService.shutdown();
 
-        System.out.println("Checking " + parallelTests + " logs...");
-
-        int ctr = 0;
-        int outOfOrderCtr = 0;
-
-        for (final ReaderWriterBase item : tests) {
-
-            ctr++;
-
-            if (item.checkOrder()) {
-
-                System.out.println("\nTest #" + ctr + ": OUT OF ORDER");
-                item.dumpLogs();
-
-                outOfOrderCtr++;
-            }
-
-            item.clearSamples();
-        }
-
-        System.out.println(String.format("\n%d of %d logs out of order.",
-                outOfOrderCtr, parallelTests));
         System.out.println("\n...Done.");
     }
 }

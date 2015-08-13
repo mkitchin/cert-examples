@@ -23,9 +23,9 @@ public class VNA00JCompliant3 extends VNA00JBase {
      *
      * @param testLengthInMs Test length in MS.
      */
-    public VNA00JCompliant3(final long testLengthInMs) {
+    public VNA00JCompliant3(final String id, final long testLengthInMs) {
 
-        super(testLengthInMs);
+        super(id, testLengthInMs);
     }
 
     @Override
@@ -36,7 +36,7 @@ public class VNA00JCompliant3 extends VNA00JBase {
             @Override
             protected void runImpl() {
 
-                this.logSample(VNA00JCompliant3.this.getCurrentValue(), 0L);
+                this.logSample(VNA00JCompliant3.this.getCurrentValue());
             }
         };
     }
@@ -49,7 +49,7 @@ public class VNA00JCompliant3 extends VNA00JBase {
             @Override
             protected void runImpl() {
 
-                this.logSample(VNA00JCompliant3.this.setCurrentValue(), 0L);
+                this.logSample(VNA00JCompliant3.this.setCurrentValue());
             }
         };
     }
